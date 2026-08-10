@@ -1,0 +1,51 @@
+{
+  "csv_name": "Kivals_LLC_10001051452_MP_07282026_reconciliationreport_v1.csv",
+  "period_start": "2026-07-11",
+  "period_end": "2026-07-25",
+  "currency": "USD",
+  "total_payable": 8805.63,
+  "transaction_count": 5279,
+  "counts": {
+    "Service Fee": 2,
+    "Unknown": 1,
+    "Adjustment": 1165,
+    "Sale": 4060,
+    "Refund": 51
+  },
+  "sections": {
+    "Service Fee": {
+      "WFS Inventory Fee/Reimbursement": -229.47
+    },
+    "Unknown": {
+      "(no amount type)": -1.4
+    },
+    "Adjustment": {
+      "Fee/Reimbursement": -4855.349999999906,
+      "WFS Inventory Fee/Reimbursement": 14.350000000000001
+    },
+    "Sale": {
+      "Commission on Product": -2485.4499999999907,
+      "Other tax (Fees)": 0.34,
+      "Product Price": 16558.03999999979,
+      "Product tax": 919.6200000000008,
+      "Product tax withheld": -919.6200000000008,
+      "Promo Code": -5.0,
+      "Total Walmart Funded Savings": 5.0
+    },
+    "Refund": {
+      "Commission on Product": 34.510000000000005,
+      "Other tax (Fees)": -0.07,
+      "Product Price": -229.87000000000003,
+      "Product tax": -7.71,
+      "Product tax withheld": 7.71
+    }
+  },
+  "section_totals": {
+    "Service Fee": -229.47,
+    "Unknown": -1.4,
+    "Adjustment": -4840.999999999905,
+    "Sale": 14072.929999999798,
+    "Refund": -195.43000000000004
+  },
+  "computed_total": 8805.629999999894
+}
