@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
 """CLI для вивантаження Walmart Payments (recon / settlement) звітів.
 
+Запускати з кореня проєкту (каталог, де лежить цей файл):
+
 Приклади:
     # які періоди виплат доступні
-    python -m walmartPayments.main list
-    python -m walmartPayments.main list --limit 10
+    python main.py list
+    python main.py list --limit 10
 
     # найсвіжіша виплата
-    python -m walmartPayments.main fetch --latest
+    python main.py fetch --latest
 
     # конкретна дата виплати (як у списку, MMDDYYYY)
-    python -m walmartPayments.main fetch --date 07282026
+    python main.py fetch --date 07282026
 
     # за розрахунковим періодом — сам знайде відповідну дату виплати
-    python -m walmartPayments.main fetch --period 2026-07-11:2026-07-25
+    python main.py fetch --period 2026-07-11:2026-07-25
 
     # тільки підсумки, без збереження файлів
-    python -m walmartPayments.main fetch --latest --no-save
+    python main.py fetch --latest --no-save
 """
 
 from __future__ import annotations
@@ -29,12 +31,12 @@ import zipfile
 from datetime import date, datetime
 from pathlib import Path
 
-from . import config
-from .api import WalmartAPIError, WalmartPaymentsAPI
-from .parser import (
+import config
+from api import WalmartAPIError, WalmartPaymentsAPI
+from parser import (
     ReconParseError, ReconReport, parse_recon_csv, parse_recon_zip,
 )
-from .summary import (
+from summary import (
     build_item_breakdown, build_statement, build_summary, format_summary,
 )
 
@@ -108,7 +110,7 @@ def save_pdf(report: ReconReport, summary: dict, output_dir: Path) -> Path:
     """Малює PDF-виписку у вигляді Seller Center + сторінку по товарах."""
     # Імпорт локальний: reportlab потрібен лише для --pdf, решта CLI має
     # працювати і без нього.
-    from .pdf_report import build_pdf
+    from pdf_report import build_pdf
 
     output_dir.mkdir(parents=True, exist_ok=True)
     pdf_path = output_dir / f"walmart_payments_{report.period_label}.pdf"
@@ -120,7 +122,7 @@ def save_pdf(report: ReconReport, summary: dict, output_dir: Path) -> Path:
 def save_sheets(report: ReconReport, summary: dict) -> dict:
     """Пише виписку + розкладку по товарах у Google Sheets."""
     # Імпорт локальний: gspread потрібен лише для --sheets.
-    from .sheets_report import export_to_sheets
+    from sheets_report import export_to_sheets
 
     return export_to_sheets(
         build_statement(summary), build_item_breakdown(report), report.period_label
@@ -186,7 +188,7 @@ def cmd_fetch(args: argparse.Namespace) -> int:
             print(f"  {path}")
 
     if args.sheets:
-        from .sheets_report import SheetsExportError
+        from sheets_report import SheetsExportError
         try:
             urls = save_sheets(report, summary)
             print(f"\nGoogle Sheets:\n  {urls['statement_url']}\n  {urls['items_url']}")
@@ -230,7 +232,7 @@ def cmd_pdf(args: argparse.Namespace) -> int:
     print(f"\nЗбережено:\n  {pdf_path}")
 
     if args.sheets:
-        from .sheets_report import SheetsExportError
+        from sheets_report import SheetsExportError
         try:
             urls = save_sheets(report, summary)
             print(f"\nGoogle Sheets:\n  {urls['statement_url']}\n  {urls['items_url']}")
@@ -259,8 +261,8 @@ def _load_report_from_file(path: Path) -> ReconReport:
 
 
 def cmd_cogs_import_prices(args: argparse.Namespace) -> int:
-    from .cogs import store as cogs_store
-    from .cogs.price_import import PriceImportError, import_from_xlsx
+    from cogs import store as cogs_store
+    from cogs.price_import import PriceImportError, import_from_xlsx
 
     if not args.file.exists():
         print(f"Файл не знайдено: {args.file}", file=sys.stderr)
@@ -287,8 +289,8 @@ def cmd_cogs_import_prices(args: argparse.Namespace) -> int:
 
 
 def cmd_cogs_compute(args: argparse.Namespace) -> int:
-    from .cogs import store as cogs_store
-    from .cogs.calculator import compute_cogs
+    from cogs import store as cogs_store
+    from cogs.calculator import compute_cogs
 
     if not args.file.exists():
         print(f"Файл не знайдено: {args.file}", file=sys.stderr)

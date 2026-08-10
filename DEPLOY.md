@@ -1,7 +1,7 @@
 # Деплой на Streamlit Community Cloud
 
-Покрокова інструкція. Репозиторій — `reports/` (корінь), `walmartPayments/`
-всередині нього — самодостатній пакет, який і деплоїться.
+Покрокова інструкція. Цей каталог (`walmartPayments/`) сам є коренем
+git-репозиторію — на GitHub деплоїться саме він, без обгортки.
 
 ## 0. Передумови
 
@@ -10,31 +10,24 @@
   GitHub).
 - Опційно, але рекомендовано: акаунт Cloudflare (R2 — щоб `cogs.db`
   переживала редеплой, див. крок 3).
+- **Приватний репозиторій обов'язково** — навіть з `.gitignore` краще не
+  ризикувати.
 
-## 1. git remote і push
+## 1. git commit і push
 
-У `reports/` вже зроблено `git init`, `.gitignore` пускає в репозиторій
-тільки `walmartPayments/`, `.streamlit/` і себе — жодні секрети, локальні
-бази чи дані сусідніх проєктів у ньому не потраплять.
+`.gitignore` в цьому каталозі не пускає в git `.env`, `credentials/`,
+`cogs/*.db`, `reports/`, кеш — перевіряй перед КОЖНИМ комітом:
 
 ```bash
-cd reports
 git add -A
-git status              # перевір: жодного .env, credentials/, *.db, *.csv/*.xlsx
-git commit -m "walmartPayments: prepare for Streamlit Cloud deploy"
+git status              # жодного .env, credentials/, *.db, *.csv/*.xlsx, __pycache__
+git commit -m "..."
+git push
 ```
 
-Створи приватний репозиторій на GitHub (порожній, без README/license —
-вони вже є) і підключи:
-
-```bash
-git remote add origin https://github.com/<your-user>/<repo>.git
-git branch -M main
-git push -u origin main
-```
-
-**Приватний репозиторій обов'язково**, поки в ньому взагалі можуть
-з'явитись чутливі дані — навіть з `.gitignore` краще не ризикувати.
+> **Якщо колись секрет уже потрапив у git (навіть в один старий коміт) —
+> `.gitignore` його звідти НЕ прибирає**, він лишається в історії. Дивись
+> "Аварійне відновлення після витоку секретів" в кінці файлу.
 
 ## 2. Google service account (якщо ще нема)
 
@@ -71,11 +64,11 @@ git push -u origin main
 1. [share.streamlit.io](https://share.streamlit.io) → New app.
 2. **Repository**: `<your-user>/<repo>` (той, що запушив на кроці 1).
 3. **Branch**: `main`.
-4. **Main file path**: `walmartPayments/webapp/Home.py`.
+4. **Main file path**: `webapp/Home.py`.
 5. Advanced settings → **Python version**: `3.12` (обов'язково — pandas 3.0
    не збирається на старіших).
-6. `walmartPayments/webapp/requirements.txt` підхопиться автоматично
-   (лежить поруч з entrypoint-файлом) — нічого додатково вказувати не треба.
+6. `webapp/requirements.txt` підхопиться автоматично (лежить поруч з
+   entrypoint-файлом) — нічого додатково вказувати не треба.
 7. Deploy — перший білд може зайняти кілька хвилин.
 
 ## 5. Secrets
@@ -142,7 +135,32 @@ universe_domain = "googleapis.com"
 
 | Симптом | Причина |
 |---|---|
-| `ModuleNotFoundError: No module named 'walmartPayments'` | Main file path вказаний неправильно, або `requirements.txt` не в тій директорії — має лежати поруч з `Home.py` (`walmartPayments/webapp/requirements.txt`) |
+| `ModuleNotFoundError: No module named 'walmartPayments'` | Main file path вказаний як `walmartPayments/webapp/Home.py` — має бути `webapp/Home.py` (цей каталог сам є коренем репо, без обгортки) |
 | Порожні Client ID/Secret на сторінці Креди | Secrets не збережені або назви ключів не збігаються з `WALMART_CLIENT_ID`/`WALMART_CLIENT_SECRET` |
 | `Не знайдено service account JSON` при експорті в Sheets | Блок `[gcp_service_account]` відсутній у Secrets або невірно розпарсений TOML (перевір `private_key`) |
 | Після Reboot ціни/історія зникли | R2 не налаштований (крок 3) або мережева помилка — дивись логи застосунку в Streamlit Cloud (Manage app → Logs), там `[r2_sync]`-попередження |
+
+## Аварійне відновлення після витоку секретів
+
+Якщо `.env`, `credentials/service_account.json` чи `cogs.db` колись
+потрапили в git (навіть один старий коміт) — вважай ці креди
+скомпрометованими, `.gitignore` заднім числом їх не ховає:
+
+1. **Ротуй усе, що витекло, негайно** — Walmart Client Secret (Seller
+   Center → Developer → API keys) і Google service account key (GCP
+   Console → IAM → Service Accounts → цей акаунт → Keys → Delete на
+   старому ключі → Add Key → створити новий, покласти в
+   `credentials/service_account.json` і в Cloud Secrets).
+2. Перевір `git log --all --oneline -- .env credentials cogs/*.db` — якщо
+   є хоч один коміт, історія містить секрет назавжди, поки її не
+   переписати.
+3. Найпростіше для одноосібного репо без інших контриб'юторів: видалити
+   репозиторій на GitHub і створити заново з чистою історією (після
+   `git rm --cached` + комітом з правильним `.gitignore` локально). Якщо
+   репозиторій треба зберегти — переписати історію через
+   [`git filter-repo`](https://github.com/newren/git-filter-repo) або
+   BFG Repo-Cleaner, потім `git push --force` (координуй з усіма, хто мав
+   доступ до старих клонів).
+4. Ротація кредів (крок 1) — головне; сама лише зачистка git-історії без
+   ротації не захищає, якщо репозиторій хоч колись був публічним або хтось
+   встиг його клонувати.

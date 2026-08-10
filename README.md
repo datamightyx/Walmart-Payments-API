@@ -12,33 +12,33 @@ Marketplace API — заміна ручному експорту з Seller Cente
 
 ```bash
 # які періоди виплат доступні
-python -m walmartPayments.main list
+python main.py list
 
 # найсвіжіша виплата
-python -m walmartPayments.main fetch --latest
+python main.py fetch --latest
 
 # за розрахунковим періодом (сам знайде дату виплати)
-python -m walmartPayments.main fetch --period 2026-07-11:2026-07-25
+python main.py fetch --period 2026-07-11:2026-07-25
 
 # за датою виплати напряму
-python -m walmartPayments.main fetch --date 07282026
+python main.py fetch --date 07282026
 
 # тільки подивитись підсумки, нічого не зберігати
-python -m walmartPayments.main fetch --latest --no-save
+python main.py fetch --latest --no-save
 
 # завантажити і одразу зібрати PDF-виписку
-python -m walmartPayments.main fetch --period 2026-07-11:2026-07-25 --pdf
+python main.py fetch --period 2026-07-11:2026-07-25 --pdf
 
 # PDF з уже завантаженого файлу, без звернення до API
-python -m walmartPayments.main pdf --file walmartPayments/reports/walmart_payments_2026-07-11_2026-07-25.csv
+python main.py pdf --file reports/walmart_payments_2026-07-11_2026-07-25.csv
 
 # те саме, але у Google Sheets замість/поряд з PDF
-python -m walmartPayments.main fetch --period 2026-07-11:2026-07-25 --sheets
+python main.py fetch --period 2026-07-11:2026-07-25 --sheets
 ```
 
-Запускати з кореня репозиторію (`C:\Users\Валерий\Desktop\reports`).
+Запускати з кореня цього каталогу (`walmartPayments/`).
 
-Файли лягають у `walmartPayments/reports/`:
+Файли лягають у `reports/`:
 
 | Файл | Що це |
 |---|---|
@@ -115,14 +115,14 @@ python -m walmartPayments.main fetch --period 2026-07-11:2026-07-25 --sheets
 ### Імпорт прайсу
 
 Прайс-файл — xlsx з аркушем `COGS`, колонки `Product`, `amazon ASIN`, `SKU`,
-`Item ID`, `Total price/unit` (такий формат лежить у корені пакета —
-`Walmart - Payments.xlsx`).
+`Item ID`, `Total price/unit` (приклад такого файлу є в експандері на
+сторінці **💲 Ціни** веб-інтерфейсу).
 
 ```bash
-python -m walmartPayments.main cogs import-prices --file "walmartPayments/Walmart - Payments.xlsx"
+python main.py cogs import-prices --file prices.xlsx
 
 # з датою дії нової ціни (дефолт — сьогодні; для нового SKU завжди 1900-01-01)
-python -m walmartPayments.main cogs import-prices --file prices.xlsx --effective-from 2026-08-10
+python main.py cogs import-prices --file prices.xlsx --effective-from 2026-08-10
 ```
 
 Ціна для SKU, якого раніше не було в базі, автоматично діє "завжди"
@@ -133,10 +133,10 @@ python -m walmartPayments.main cogs import-prices --file prices.xlsx --effective
 ### Розрахунок
 
 ```bash
-python -m walmartPayments.main cogs compute --file walmartPayments/reports/walmart_payments_2026-07-11_2026-07-25.csv
+python main.py cogs compute --file reports/walmart_payments_2026-07-11_2026-07-25.csv
 
 # ціни станом на конкретну дату замість кінця періоду
-python -m walmartPayments.main cogs compute --file ... --as-of 2026-07-20
+python main.py cogs compute --file ... --as-of 2026-07-20
 ```
 
 Юніти й виручка рахуються з рядків `Sale`/`Refund` з `Amount Type == Product

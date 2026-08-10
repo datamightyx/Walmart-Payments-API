@@ -35,7 +35,7 @@ from gspread_formatting.batch_update_requests import (
     set_frozen as _set_frozen_requests,
 )
 
-from . import config
+import config
 
 GREY = Color(0.40, 0.40, 0.40)
 BLUE = Color(0.0, 0.44, 0.86)     # фірмовий синій Walmart

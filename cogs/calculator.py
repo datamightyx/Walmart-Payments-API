@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 from . import store
-from ..parser import ReconReport, parse_amount
+from parser import ReconReport, parse_amount
 
 
 @dataclass

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from .parser import ReconReport, parse_amount
+from parser import ReconReport, parse_amount
 
 # Порядок секцій у виводі — як у Seller Center.
 SECTION_ORDER = ["Sale", "Refund", "Adjustment", "Service Fee"]

@@ -20,7 +20,7 @@ from typing import Callable
 
 import requests
 
-from . import config
+import config
 
 logger = logging.getLogger(__name__)
 

@@ -1,0 +1,8 @@
+.env
+credentials/
+cogs/*.db
+reports/
+__pycache__/
+*.pyc
+.venv/
+.idea/

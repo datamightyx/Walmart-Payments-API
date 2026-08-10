@@ -4,9 +4,11 @@
 `streamlit run` виконує файл сторінки як окремий скрипт, а не як частину
 пакета — відносні імпорти (`from ..config import ...`) впадуть з
 ImportError. Тому кожна сторінка спершу імпортує цей модуль, який кладе
-корінь репозиторію (`reports/`, батько `walmartPayments/`) у sys.path і
-лише тоді абсолютно імпортує `walmartPayments.*`.
-"""
+корінь проєкту (батько `webapp/` — містить `config.py`, `api.py`, `cogs/`
+напряму, БЕЗ обгортки `walmartPayments/`: саме так лежить деплой на
+Streamlit Cloud, репозиторій = цей каталог) у sys.path і лише тоді
+імпортує решту модулів як top-level (`import config`, `from cogs import
+store`, ...) — без крапки, без префіксу `walmartPayments.`."""
 
 from __future__ import annotations
 
@@ -14,7 +16,7 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
@@ -32,7 +34,7 @@ try:
 except Exception:
     pass
 
-from walmartPayments import config  # noqa: E402
+import config  # noqa: E402
 
 # Service account JSON не лежить в репо (credentials/ в .gitignore) — якщо
 # його нема на диску, але є в secrets.toml (блок [gcp_service_account]),
@@ -46,20 +48,20 @@ if not config.GOOGLE_CREDENTIALS_FILE.exists():
         import json as _json
         config.GOOGLE_CREDENTIALS_FILE.parent.mkdir(parents=True, exist_ok=True)
         config.GOOGLE_CREDENTIALS_FILE.write_text(_json.dumps(dict(_sa)))
-from walmartPayments.api import WalmartAPIError, WalmartPaymentsAPI  # noqa: E402
-from walmartPayments.cogs import store as cogs_store  # noqa: E402
-from walmartPayments.cogs.ad_spend import AdSpendImportError, total_ad_spend  # noqa: E402
-from walmartPayments.cogs.calculator import compute_cogs  # noqa: E402
-from walmartPayments.cogs.price_import import (  # noqa: E402
+from api import WalmartAPIError, WalmartPaymentsAPI  # noqa: E402
+from cogs import store as cogs_store  # noqa: E402
+from cogs.ad_spend import AdSpendImportError, total_ad_spend  # noqa: E402
+from cogs.calculator import compute_cogs  # noqa: E402
+from cogs.price_import import (  # noqa: E402
     PriceImportError, import_from_xlsx,
 )
-from walmartPayments.cogs.store import SENTINEL_DATE  # noqa: E402
-from walmartPayments.main import PAYOUT_DATE_FORMAT, resolve_payout_date  # noqa: E402
-from walmartPayments.parser import ReconParseError, parse_recon_zip  # noqa: E402
-from walmartPayments.sheets_report import (  # noqa: E402
+from cogs.store import SENTINEL_DATE  # noqa: E402
+from main import PAYOUT_DATE_FORMAT, resolve_payout_date  # noqa: E402
+from parser import ReconParseError, parse_recon_zip  # noqa: E402
+from sheets_report import (  # noqa: E402
     SheetsExportError, export_to_sheets,
 )
-from walmartPayments.summary import (  # noqa: E402
+from summary import (  # noqa: E402
     build_item_breakdown, build_statement, build_summary,
 )
 

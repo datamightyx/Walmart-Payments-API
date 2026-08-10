@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from .. import config
+import config
 
 logger = logging.getLogger(__name__)
 

@@ -12,9 +12,9 @@
     print(build_summary(report)["total_payable"])
 """
 
-from .api import WalmartAPIError, WalmartPaymentsAPI
-from .parser import ReconParseError, ReconReport, parse_recon_csv, parse_recon_zip
-from .summary import build_summary, format_summary
+from api import WalmartAPIError, WalmartPaymentsAPI
+from parser import ReconParseError, ReconReport, parse_recon_csv, parse_recon_zip
+from summary import build_summary, format_summary
 
 __all__ = [
     "WalmartPaymentsAPI",
