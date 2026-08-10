@@ -37,17 +37,18 @@ except Exception:
 import config  # noqa: E402
 
 # Service account JSON не лежить в репо (credentials/ в .gitignore) — якщо
-# його нема на диску, але є в secrets.toml (блок [gcp_service_account]),
-# пишемо його у фіксований шлях один раз при старті процесу.
-if not config.GOOGLE_CREDENTIALS_FILE.exists():
-    try:
-        _sa = st.secrets.get("gcp_service_account")
-    except Exception:
-        _sa = None
-    if _sa:
-        import json as _json
-        config.GOOGLE_CREDENTIALS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        config.GOOGLE_CREDENTIALS_FILE.write_text(_json.dumps(dict(_sa)))
+# він є в secrets.toml (блок [gcp_service_account]), пишемо/перезаписуємо
+# його у фіксований шлях при КОЖНОМУ старті процесу. Без "if not exists":
+# на ефемерному диску контейнера файл, записаний старим ключем, інакше
+# ніколи не оновиться після зміни secrets — тільки disk-wipe при redeploy.
+try:
+    _sa = st.secrets.get("gcp_service_account")
+except Exception:
+    _sa = None
+if _sa:
+    import json as _json
+    config.GOOGLE_CREDENTIALS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    config.GOOGLE_CREDENTIALS_FILE.write_text(_json.dumps(dict(_sa)))
 from api import WalmartAPIError, WalmartPaymentsAPI  # noqa: E402
 from cogs import store as cogs_store  # noqa: E402
 from cogs.ad_spend import AdSpendImportError, total_ad_spend  # noqa: E402
