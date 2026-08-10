@@ -170,7 +170,7 @@ streamlit run walmartPayments/webapp/Home.py
 
 | Сторінка | Що робить |
 |---|---|
-| 🔑 Креди | Walmart API / Google Sheets credentials — зберігаються в `walmartPayments/.env`, не в коді |
+| 🔑 Credentials | Walmart API / Google Sheets / R2 credentials — зберігаються в `walmartPayments/.env`, не в коді |
 | 💲 Ціни | імпорт прайсу з xlsx (з попереднім переглядом змін), ручне додавання/оновлення ціни, історія цін по SKU |
 | ▶️ Запуск | обрати розрахунковий період (система сама знайде дату виплати через Walmart API) і дату, на яку брати ціни, порахувати COGS, ввести Advertising Spend і вивантажити все у Google Sheets |
 | 📜 Історія | усі попередні запуски розрахунку COGS — незмінні знімки, включно з цінами, які фактично використались |
