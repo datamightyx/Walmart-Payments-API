@@ -33,7 +33,7 @@ if "cogs_report" not in st.session_state:
 with st.container(border=True):
     st.subheader("1. Обрати звіт")
     st.caption(
-        "Обери розрахунковий період — система сама знайде відповідну дату "
+        "Оберіть розрахунковий період"
         "виплати через Walmart API."
     )
 
@@ -149,7 +149,7 @@ if result:
         )
 
         st.caption(
-            f"run_id={result['run_id']} збережено в історію — дивись сторінку 📜 Історія."
+            f"run_id={result['run_id']} збережено в історію"
         )
 
     if report.period_start and report.period_end:
@@ -167,19 +167,19 @@ if result:
                     float(existing_extra["ad_spend"]) if existing_extra else 0.0
                 )
 
-            st.caption(
-                "Walmart Recon API рекламні витрати не віддає. Порахуй суму "
-                "автоматично з файлу Ads-кабінету «PPC Item Performance» (файл "
-                "не містить дати — вважається, що покриває цей самий період) "
-                "або введи вручну."
-            )
+            # st.caption(
+            #     "Walmart Recon API рекламні витрати не віддає. Порахуй суму "
+            #     "автоматично з файлу Ads-кабінету «PPC Item Performance» (файл "
+            #     "не містить дати — вважається, що покриває цей самий період) "
+            #     "або введи вручну."
+            # )
             with st.expander(
                 "Приклад файлу (Walmart Ads → Reports → PPC Item Performance)",
                 expanded=True,
             ):
                 st.caption(
                     "Система читає тільки колонку `Ad Spend` (сумує по всіх "
-                    "рядках), решта колонок ігнорується — можеш вивантажити "
+                    "рядках), решта колонок ігнорується — можна вивантажити "
                     "файл із Ads-кабінету як є, без правок."
                 )
                 st.dataframe(
