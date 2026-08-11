@@ -259,6 +259,8 @@ def build_item_breakdown(report: ReconReport) -> dict:
                 entry["commission"] += amount
         elif txn_type == "Refund":
             entry["refunds"] += amount
+            if amount_type == "Product Price":
+                entry["units"] -= int(parse_amount(row.get("Ship Qty", "")))
         else:
             entry["fees"] += amount
 
