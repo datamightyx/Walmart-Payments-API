@@ -132,6 +132,7 @@ def _row_template() -> list[dict]:
         add(f"header:{label}", f"{label} *", "line_muted")
 
     add("sales_title", "Sales", "section")
+    add("sales_units", "Total Units Sold", "units")
     for label, amount_types in SALES_LINES:
         muted = amount_types is None
         add(f"sales:{label}", f"{label} *" if muted else label, "line_muted" if muted else "line")
@@ -162,12 +163,14 @@ def _row_template() -> list[dict]:
     return template
 
 
-def _statement_values(statement: dict) -> dict[str, object]:
+def _statement_values(statement: dict, units_sold: int | None = None) -> dict[str, object]:
     """Значення для однієї колонки (одного періоду), по ключах _row_template()."""
     values: dict[str, object] = {
         "paid": _money(statement["total_payable"]),
         "paid_total": _money(statement["total_payable"]),
     }
+    if units_sold is not None:
+        values["sales_units"] = units_sold
 
     for label, line in zip(HEADER_LINES, statement["header_lines"]):
         values[f"header:{label}"] = _money(line["amount"])
@@ -242,6 +245,13 @@ def _statement_formats(template: list[dict], total_cols: int) -> list[tuple[str,
         elif kind == "line":
             cell_formats.append((data_rng, CellFormat(
                 numberFormat=CURRENCY_FORMAT, horizontalAlignment="RIGHT")))
+        elif kind == "units":
+            cell_formats.append((rng, CellFormat(
+                textFormat=TextFormat(italic=True, foregroundColor=GREY))))
+            cell_formats.append((data_rng, CellFormat(
+                numberFormat=NumberFormat(type="NUMBER", pattern="#,##0"),
+                horizontalAlignment="RIGHT",
+                textFormat=TextFormat(italic=True, foregroundColor=GREY))))
         elif kind == "line_muted":
             cell_formats.append((rng, CellFormat(
                 textFormat=TextFormat(italic=True, foregroundColor=GREY))))
@@ -269,7 +279,7 @@ def _statement_formats(template: list[dict], total_cols: int) -> list[tuple[str,
 
 
 def _write_statement_pivot(
-    spreadsheet: gspread.Spreadsheet, statement: dict, period_label: str
+    spreadsheet: gspread.Spreadsheet, statement: dict, breakdown: dict, period_label: str
 ) -> tuple[gspread.Worksheet, list[dict]]:
     """Пише період як колонку в постійну вкладку "Виписка" (B = найновіший).
 
@@ -301,7 +311,8 @@ def _write_statement_pivot(
         target_col = 2
         total_cols = 2 + len(existing_periods)
 
-    values = _statement_values(statement)
+    units_sold = sum(item["units"] for item in breakdown["items"])
+    values = _statement_values(statement, units_sold)
 
     labels = [[""]] + [[row["label"]] for row in template]
     worksheet.update(labels, "A1", value_input_option=ValueInputOption.user_entered)
@@ -426,7 +437,7 @@ def export_to_sheets(
     )
 
     report(f'Оновлення вкладки "{STATEMENT_SHEET_TITLE}"…')
-    statement_ws, requests = _write_statement_pivot(spreadsheet, statement, period_label)
+    statement_ws, requests = _write_statement_pivot(spreadsheet, statement, breakdown, period_label)
 
     report(f'Перестворення вкладки "{period_label} Товари"…')
     items_ws = _reset_worksheet(
