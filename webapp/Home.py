@@ -49,30 +49,34 @@ st.markdown(
 
     .st-key-big-nav-card {
         position: relative; display: flex; flex-direction: column;
-        min-height: 118px;
+        min-height: 190px;
         background: linear-gradient(135deg, #0071dc, #004f9a) !important;
-        border: none !important; border-radius: 16px !important;
-        box-shadow: 0 4px 14px rgba(0, 113, 220, 0.35);
+        border: none !important; border-radius: 20px !important;
+        box-shadow: 0 6px 20px rgba(0, 113, 220, 0.35);
         transition: transform .12s ease, box-shadow .12s ease;
         overflow: hidden;
     }
     .st-key-big-nav-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 113, 220, 0.45);
+        box-shadow: 0 8px 26px rgba(0, 113, 220, 0.45);
     }
-    /* посилання розтягнуте на всю картку — клік працює будь-де в її межах */
+    /* видима "таблетка"-кнопка по центру картки, клікабельна цілком */
     .st-key-big-nav-card [data-testid="stPageLink"] a {
         position: absolute; inset: 0; z-index: 2;
         display: flex; align-items: center; justify-content: center;
-        padding-bottom: 26px;
+        padding-bottom: 40px;
     }
     .st-key-big-nav-card [data-testid="stPageLink"] a p {
-        color: #ffffff !important; font-size: 1.45rem; font-weight: 700; margin: 0;
+        color: #ffffff !important; font-size: 2rem; font-weight: 800; margin: 0;
+        background: rgba(255, 255, 255, 0.14);
+        padding: 20px 44px; border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        letter-spacing: .3px;
     }
     .st-key-big-nav-card .big-nav-caption {
         position: relative; z-index: 1;
-        padding: 46px 16px 20px;
-        text-align: center; color: #ffffff; opacity: 0.88; font-size: 0.92rem;
+        padding: 0 16px 22px; margin-top: auto;
+        text-align: center; color: #ffffff; opacity: 0.88; font-size: 0.95rem;
     }
 
     /* три менші картки — однакова висота, теж клікабельні цілком */
