@@ -117,11 +117,17 @@ with st.container(border=True):
         if not sku.strip():
             st.error("SKU обов'язковий.")
         else:
-            is_new = not cogs_store.has_any_price(conn, sku.strip())
+            sku_clean = sku.strip()
+            existing = cogs_store.price_history(conn, sku_clean)
+            last = existing[0] if existing else None
+            is_new = last is None
             eff = cogs_store.SENTINEL_DATE if is_new else manual_eff_date
             cogs_store.insert_price_version(
-                conn, sku=sku.strip(), item_id=None, asin=None,
-                product_name=product_name.strip(), unit_cost=unit_cost,
+                conn, sku=sku_clean,
+                item_id=last["item_id"] if last else None,
+                asin=last["asin"] if last else None,
+                product_name=product_name.strip() or (last["product_name"] if last else ""),
+                unit_cost=unit_cost,
                 effective_from=eff, source="manual",
             )
             st.success(f"Збережено ціну {sku} = {unit_cost:.2f} (діє з {eff.isoformat()}).")
