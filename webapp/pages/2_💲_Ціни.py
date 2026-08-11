@@ -23,6 +23,34 @@ conn = get_db_connection()
 
 MONEY_COLUMN = st.column_config.NumberColumn(format="$%.2f")
 
+# ── поточні ціни (нагорі, виділено) ──────────────────────────────────────
+st.markdown(
+    """
+    <div style="background-color:#eaf4ff;border-left:5px solid #0071dc;
+    border-radius:6px;padding:10px 16px;margin-bottom:6px;">
+    <span style="font-size:1.05rem;font-weight:600;color:#0071dc;">
+    💲 Поточні ціни</span>
+    <span style="color:#555;"> — актуальний unit cost, який зараз
+    використовується для розрахунку COGS.</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+with st.container(border=True):
+    current = cogs_store.current_prices(conn)
+    if current:
+        df = pd.DataFrame([{
+            "SKU": r["sku"], "Товар": r["product_name"], "Item ID": r["item_id"],
+            "ASIN": r["asin"], "Ціна": r["unit_cost"], "Діє з": r["effective_from"],
+            "Джерело": r["source"],
+        } for r in current])
+        st.dataframe(
+            df, width="stretch", hide_index=True,
+            column_config={"Ціна": MONEY_COLUMN},
+        )
+    else:
+        st.info("Ще немає жодної ціни в базі.")
+
 # ── імпорт з xlsx ────────────────────────────────────────────────────────
 with st.container(border=True):
     st.subheader("Імпорт прайсу з Excel")
@@ -133,24 +161,8 @@ with st.container(border=True):
             st.success(f"Збережено ціну {sku} = {unit_cost:.2f} (діє з {eff.isoformat()}).")
             st.rerun()
 
-# ── поточні ціни ──────────────────────────────────────────────────────────
+# ── історія ціни по SKU ───────────────────────────────────────────────────
 with st.container(border=True):
-    st.subheader("Поточні ціни")
-    current = cogs_store.current_prices(conn)
-    if current:
-        df = pd.DataFrame([{
-            "SKU": r["sku"], "Товар": r["product_name"], "Item ID": r["item_id"],
-            "ASIN": r["asin"], "Ціна": r["unit_cost"], "Діє з": r["effective_from"],
-            "Джерело": r["source"],
-        } for r in current])
-        st.dataframe(
-            df, width="stretch", hide_index=True,
-            column_config={"Ціна": MONEY_COLUMN},
-        )
-    else:
-        st.info("Ще немає жодної ціни в базі.")
-
-    st.divider()
     st.subheader("Історія ціни по SKU")
     skus = cogs_store.all_skus(conn)
     if skus:

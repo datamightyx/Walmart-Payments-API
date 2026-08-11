@@ -41,19 +41,64 @@ if not config.CLIENT_ID or not config.CLIENT_SECRET:
 
 st.subheader("Навігація", anchor=False)
 
+st.markdown(
+    """
+    <style>
+    /* велика кнопка "Запуск" — усе всередині маркованого блоку */
+    .big-nav-marker + div [data-testid="stPageLink"] a {
+        display: flex; justify-content: center; align-items: center;
+        gap: 12px; padding: 30px 20px; border-radius: 16px; border: none;
+        background: linear-gradient(135deg, #0071dc, #004f9a);
+        box-shadow: 0 4px 14px rgba(0, 113, 220, 0.35);
+        transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .big-nav-marker + div [data-testid="stPageLink"] a:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0, 113, 220, 0.45);
+    }
+    .big-nav-marker + div [data-testid="stPageLink"] a p {
+        color: #ffffff !important; font-size: 1.5rem; font-weight: 700;
+    }
+    .big-nav-marker + div .big-nav-caption {
+        text-align: center; color: #ffffff; opacity: 0.9;
+        margin-top: -4px; font-size: 0.95rem;
+    }
+
+    /* три однакові кнопки внизу — рівна висота і вирівнювання */
+    .small-nav-card { min-height: 128px; display: flex; flex-direction: column;
+                       justify-content: space-between; }
+    .small-nav-card [data-testid="stPageLink"] a p { font-weight: 600; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ── велика кнопка: Запуск ────────────────────────────────────────────────
+st.markdown('<div class="big-nav-marker"></div>', unsafe_allow_html=True)
+with st.container(border=True):
+    st.page_link("pages/3_▶️_Запуск.py", label="Запуск розрахунку COGS", icon="▶️")
+    st.markdown(
+        '<div class="big-nav-caption">Обрати звіт і дату, порахувати COGS, '
+        'вивантажити у Sheets</div>',
+        unsafe_allow_html=True,
+    )
+
+st.write("")
+
+# ── три менші кнопки — рівним рядом ──────────────────────────────────────
 nav_items = [
     ("pages/1_🔑_Credentials.py", "Credentials", "🔑",
      "Walmart API / Google Sheets / R2"),
     ("pages/2_💲_Ціни.py", "Ціни", "💲",
      "Імпорт прайсу, ручне редагування, історія цін по SKU"),
-    ("pages/3_▶️_Запуск.py", "Запуск", "▶️",
-     "Обрати звіт і дату, порахувати COGS, вивантажити у Sheets"),
     ("pages/4_📜_Історія.py", "Історія", "📜",
      "Усі попередні запуски розрахунку COGS (незмінні)"),
 ]
-nav_cols = st.columns(4)
+nav_cols = st.columns(3)
 for col, (path, label, icon, help_text) in zip(nav_cols, nav_items):
     with col:
         with st.container(border=True):
+            st.markdown('<div class="small-nav-card">', unsafe_allow_html=True)
             st.page_link(path, label=f"**{label}**", icon=icon)
             st.caption(help_text)
+            st.markdown('</div>', unsafe_allow_html=True)
