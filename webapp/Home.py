@@ -44,38 +44,64 @@ st.subheader("Навігація", anchor=False)
 st.markdown(
     """
     <style>
-    /* велика кнопка "Запуск" — усе всередині маркованого блоку */
-    .big-nav-marker + div [data-testid="stPageLink"] a {
-        display: flex; justify-content: center; align-items: center;
-        gap: 12px; padding: 30px 20px; border-radius: 16px; border: none;
+    /* маркер лежить УСЕРЕДИНІ st.container(border=True) — :has() чіпляє
+    стилі до реальної обгортки картки (яка й так вміщує page_link/caption
+    справжньою вкладеністю), а не до вигаданого сусіда. */
+
+    /* велика кнопка "Запуск" */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.big-nav-marker) {
+        position: relative; display: flex; flex-direction: column;
+        justify-content: center; min-height: 118px;
         background: linear-gradient(135deg, #0071dc, #004f9a);
+        border: none; border-radius: 16px;
         box-shadow: 0 4px 14px rgba(0, 113, 220, 0.35);
         transition: transform .12s ease, box-shadow .12s ease;
     }
-    .big-nav-marker + div [data-testid="stPageLink"] a:hover {
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.big-nav-marker):hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 18px rgba(0, 113, 220, 0.45);
+        box-shadow: 0 6px 20px rgba(0, 113, 220, 0.45);
     }
-    .big-nav-marker + div [data-testid="stPageLink"] a p {
-        color: #ffffff !important; font-size: 1.5rem; font-weight: 700;
+    /* посилання розтягнуте на всю картку — клік працює будь-де в її межах */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.big-nav-marker)
+        [data-testid="stPageLink"] a {
+        position: absolute; inset: 0; z-index: 2;
+        display: flex; align-items: center; justify-content: center;
+        padding-bottom: 22px;
     }
-    .big-nav-marker + div .big-nav-caption {
-        text-align: center; color: #ffffff; opacity: 0.9;
-        margin-top: -4px; font-size: 0.95rem;
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.big-nav-marker)
+        [data-testid="stPageLink"] a p {
+        color: #ffffff !important; font-size: 1.45rem; font-weight: 700; margin: 0;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.big-nav-marker) .big-nav-caption {
+        position: relative; z-index: 1; margin-top: auto; padding-top: 4px;
+        text-align: center; color: #ffffff; opacity: 0.88; font-size: 0.92rem;
     }
 
-    /* три однакові кнопки внизу — рівна висота і вирівнювання */
-    .small-nav-card { min-height: 128px; display: flex; flex-direction: column;
-                       justify-content: space-between; }
-    .small-nav-card [data-testid="stPageLink"] a p { font-weight: 600; }
+    /* три менші картки — однакова висота, теж клікабельні цілком */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.small-nav-marker) {
+        position: relative; min-height: 128px;
+        transition: box-shadow .12s ease, border-color .12s ease;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.small-nav-marker):hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-color: #0071dc;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.small-nav-marker)
+        [data-testid="stPageLink"] a {
+        position: absolute; inset: 0; z-index: 2;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.small-nav-marker)
+        [data-testid="stPageLink"] a p {
+        font-weight: 600;
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # ── велика кнопка: Запуск ────────────────────────────────────────────────
-st.markdown('<div class="big-nav-marker"></div>', unsafe_allow_html=True)
 with st.container(border=True):
+    st.markdown('<div class="big-nav-marker"></div>', unsafe_allow_html=True)
     st.page_link("pages/3_▶️_Запуск.py", label="Запуск розрахунку COGS", icon="▶️")
     st.markdown(
         '<div class="big-nav-caption">Обрати звіт і дату, порахувати COGS, '
@@ -98,7 +124,6 @@ nav_cols = st.columns(3)
 for col, (path, label, icon, help_text) in zip(nav_cols, nav_items):
     with col:
         with st.container(border=True):
-            st.markdown('<div class="small-nav-card">', unsafe_allow_html=True)
+            st.markdown('<div class="small-nav-marker"></div>', unsafe_allow_html=True)
             st.page_link(path, label=f"**{label}**", icon=icon)
             st.caption(help_text)
-            st.markdown('</div>', unsafe_allow_html=True)
