@@ -73,7 +73,8 @@ st.markdown(
         color: #ffffff !important; font-size: 1.45rem; font-weight: 700; margin: 0;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.big-nav-marker) .big-nav-caption {
-        position: relative; z-index: 1; margin-top: auto; padding-top: 4px;
+        position: relative; z-index: 1; margin-top: auto;
+        padding-top: 4px; padding-bottom: 16px;
         text-align: center; color: #ffffff; opacity: 0.88; font-size: 0.92rem;
     }
 
