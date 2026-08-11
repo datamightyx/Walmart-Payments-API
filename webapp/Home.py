@@ -73,7 +73,6 @@ st.markdown(
         position: absolute !important; inset: 0 !important; z-index: 2;
         width: auto !important; height: auto !important;
         display: flex; align-items: center; justify-content: center;
-        padding-bottom: 40px;
     }
     .st-key-big-nav-card [data-testid="stPageLink"] a p {
         color: #ffffff !important; font-size: 2rem; font-weight: 800; margin: 0;
