@@ -27,7 +27,7 @@ from __future__ import annotations
 from typing import Callable
 
 import gspread
-from gspread.utils import ValueInputOption, a1_range_to_grid_range
+from gspread.utils import ValueInputOption
 from gspread_formatting import Borders, Border, CellFormat, Color, NumberFormat, TextFormat
 from gspread_formatting.batch_update_requests import (
     format_cell_ranges,
@@ -36,6 +36,9 @@ from gspread_formatting.batch_update_requests import (
 )
 
 import config
+from summary import HEADER_LINES, REFUND_LINES, SALES_LINES
+
+STATEMENT_SHEET_TITLE = "Виписка"
 
 GREY = Color(0.40, 0.40, 0.40)
 BLUE = Color(0.0, 0.44, 0.86)     # фірмовий синій Walmart
@@ -93,89 +96,142 @@ def _money(value: float) -> float:
     return round(value or 0.0, 2)
 
 
-def _merge_request(worksheet: gspread.Worksheet, a1_range: str) -> dict:
-    return {
-        "mergeCells": {
-            "mergeType": "MERGE_ALL",
-            "range": a1_range_to_grid_range(a1_range, worksheet.id),
-        }
+# ── Вкладка 1: виписка (одна вкладка, період = колонка, B = найновіший) ────────
+
+NOTE_TEXT = (
+    "* Рядок є в Seller Center, але Walmart Recon API його не віддає. "
+    "Такі позиції взаємознищуються в UI, тому підсумки збігаються з ним до копійки."
+)
+
+
+def _col_letter(col: int) -> str:
+    """1 -> 'A', 2 -> 'B', 27 -> 'AA'."""
+    letters = ""
+    while col > 0:
+        col, rem = divmod(col - 1, 26)
+        letters = chr(65 + rem) + letters
+    return letters
+
+
+def _row_template() -> list[dict]:
+    """Фіксований (однаковий для всіх періодів) список рядків вкладки "Виписка".
+
+    "provided" для HEADER_LINES/SALES_LINES/REFUND_LINES визначається складом
+    самого layout (amount_types is None), а не даними конкретного періоду —
+    тому статус line/line_muted можна зашити в шаблон один раз.
+    """
+    template: list[dict] = []
+
+    def add(key: str, label: str, kind: str) -> None:
+        template.append({"key": key, "label": label, "kind": kind})
+
+    add("paid", "Paid to you", "paid")
+    add("blank1", "", "blank")
+
+    for label in HEADER_LINES:
+        add(f"header:{label}", f"{label} *", "line_muted")
+
+    add("sales_title", "Sales", "section")
+    for label, amount_types in SALES_LINES:
+        muted = amount_types is None
+        add(f"sales:{label}", f"{label} *" if muted else label, "line_muted" if muted else "line")
+    add("sales_total", "Total", "total")
+
+    add("refunds_title", "Refunds", "section")
+    for label, amount_types in REFUND_LINES:
+        muted = amount_types is None
+        add(f"refund:{label}", f"{label} *" if muted else label, "line_muted" if muted else "line")
+    add("refunds_total", "Total", "total")
+
+    add("services_title", "Services fees", "section")
+    add("services_line", "Walmart fulfillment services", "line")
+    add("services_total", "Total", "total")
+
+    add("blank2", "", "blank")
+    add("paid_total", "Paid to you:", "total")
+    add("note", NOTE_TEXT, "note")
+
+    add("blank3", "", "blank")
+    add("total_cogs", "Total COGS", "total")
+    add("blank4", "", "blank")
+    add("ad_spend", "Advertising (Spend)", "line")
+    add("blank5", "", "blank")
+    add("profit", "Profit", "total")
+    add("tacos", "TACOS %", "percent")
+
+    return template
+
+
+def _statement_values(statement: dict) -> dict[str, object]:
+    """Значення для однієї колонки (одного періоду), по ключах _row_template()."""
+    values: dict[str, object] = {
+        "paid": _money(statement["total_payable"]),
+        "paid_total": _money(statement["total_payable"]),
     }
 
+    for label, line in zip(HEADER_LINES, statement["header_lines"]):
+        values[f"header:{label}"] = _money(line["amount"])
 
-# ── Вкладка 1: виписка ────────────────────────────────────────────────────────
+    sections_by_title = {section["title"]: section for section in statement["sections"]}
 
-def _write_statement(worksheet: gspread.Worksheet, statement: dict) -> list[dict]:
-    """Пише значення одразу, форматування повертає як список requests (не виконує)."""
-    rows: list[list] = []
-    row_kinds: list[str] = []   # паралельно rows: "title"|"paid"|"section"|"line"|"line_muted"|"total"|"note"
+    sales = sections_by_title.get("Sales")
+    if sales:
+        for (label, _), line in zip(SALES_LINES, sales["lines"]):
+            values[f"sales:{label}"] = _money(line["amount"])
+        values["sales_total"] = _money(sales["total"])
 
-    rows.append([f"{statement['period_start']} – {statement['period_end']}", ""])
-    row_kinds.append("title")
-    rows.append(["Paid to you", _money(statement["total_payable"])])
-    row_kinds.append("paid")
-    rows.append(["", ""])
-    row_kinds.append("blank")
+    refunds = sections_by_title.get("Refunds")
+    if refunds:
+        for (label, _), line in zip(REFUND_LINES, refunds["lines"]):
+            values[f"refund:{label}"] = _money(line["amount"])
+        values["refunds_total"] = _money(refunds["total"])
 
-    for line in statement["header_lines"]:
-        label = line["label"] + (" *" if not line["provided"] else "")
-        rows.append([label, _money(line["amount"])])
-        row_kinds.append("line" if line["provided"] else "line_muted")
-
-    for section in statement["sections"]:
-        rows.append([section["title"], ""])
-        row_kinds.append("section")
-        for line in section["lines"]:
-            label = line["label"] + (" *" if not line["provided"] else "")
-            rows.append([label, _money(line["amount"])])
-            row_kinds.append("line" if line["provided"] else "line_muted")
-        rows.append(["Total", _money(section["total"])])
-        row_kinds.append("total")
-
-    rows.append(["", ""])
-    row_kinds.append("blank")
-    rows.append(["Paid to you:", _money(statement["total_payable"])])
-    row_kinds.append("total")
-    rows.append([
-        "* Рядок є в Seller Center, але Walmart Recon API його не віддає. "
-        "Такі позиції взаємознищуються в UI, тому підсумки збігаються з ним "
-        "до копійки.",
-        "",
-    ])
-    row_kinds.append("note")
+    services = sections_by_title.get("Services fees")
+    if services:
+        values["services_line"] = _money(services["lines"][0]["amount"])
+        values["services_total"] = _money(services["total"])
 
     trailer = statement.get("trailer")
     if trailer:
-        rows.append(["", ""])
-        row_kinds.append("blank")
-        rows.append(["Total COGS", _money(trailer["total_cogs"])])
-        row_kinds.append("total")
-        rows.append(["", ""])
-        row_kinds.append("blank")
-        rows.append(["Advertising (Spend)", _money(trailer["ad_spend"])])
-        row_kinds.append("line")
-        rows.append(["", ""])
-        row_kinds.append("blank")
-        profit = statement["total_payable"] - trailer["total_cogs"] - trailer["ad_spend"]
-        rows.append(["Profit", _money(profit)])
-        row_kinds.append("total")
+        values["total_cogs"] = _money(trailer["total_cogs"])
+        values["ad_spend"] = _money(trailer["ad_spend"])
+        values["profit"] = _money(
+            statement["total_payable"] - trailer["total_cogs"] - trailer["ad_spend"])
         tacos_pct = trailer.get("tacos_pct")
-        rows.append(["TACOS %", (tacos_pct / 100) if tacos_pct is not None else ""])
-        row_kinds.append("percent")
+        values["tacos"] = (tacos_pct / 100) if tacos_pct is not None else ""
 
-    worksheet.update(rows, "A1", value_input_option=ValueInputOption.user_entered)
+    return values
 
-    cell_formats: list[tuple[str, CellFormat]] = []
-    merges: list[str] = []
 
-    for index, kind in enumerate(row_kinds, start=1):
-        rng = f"A{index}:B{index}"
-        if kind == "title":
-            cell_formats.append((rng, CellFormat(
-                textFormat=TextFormat(bold=True, fontSize=13, foregroundColor=BLUE))))
-        elif kind == "paid":
-            cell_formats.append((f"A{index}", CellFormat(
+def _ensure_statement_worksheet(
+    spreadsheet: gspread.Spreadsheet, template: list[dict]
+) -> gspread.Worksheet:
+    try:
+        worksheet = spreadsheet.worksheet(STATEMENT_SHEET_TITLE)
+    except gspread.exceptions.WorksheetNotFound:
+        return spreadsheet.add_worksheet(
+            title=STATEMENT_SHEET_TITLE, rows=len(template) + 1, cols=2)
+    if worksheet.row_count < len(template) + 1:
+        worksheet.add_rows(len(template) + 1 - worksheet.row_count)
+    return worksheet
+
+
+def _statement_formats(template: list[dict], total_cols: int) -> list[tuple[str, CellFormat]]:
+    last_col = _col_letter(total_cols)
+    cell_formats: list[tuple[str, CellFormat]] = [
+        (f"A1:{last_col}1", CellFormat(
+            textFormat=TextFormat(bold=True, fontSize=11, foregroundColor=BLUE),
+            horizontalAlignment="CENTER")),
+    ]
+
+    for offset, row in enumerate(template, start=2):
+        kind = row["kind"]
+        rng = f"A{offset}:{last_col}{offset}"
+        data_rng = f"B{offset}:{last_col}{offset}"
+        if kind == "paid":
+            cell_formats.append((f"A{offset}", CellFormat(
                 textFormat=TextFormat(bold=True, fontSize=10, foregroundColor=BLUE))))
-            cell_formats.append((f"B{index}", CellFormat(
+            cell_formats.append((data_rng, CellFormat(
                 textFormat=TextFormat(bold=True, fontSize=16),
                 numberFormat=CURRENCY_FORMAT,
                 horizontalAlignment="RIGHT")))
@@ -184,37 +240,83 @@ def _write_statement(worksheet: gspread.Worksheet, statement: dict) -> list[dict
                 backgroundColor=LIGHT_BG,
                 textFormat=TextFormat(bold=True, fontSize=11))))
         elif kind == "line":
-            cell_formats.append((f"B{index}", CellFormat(
+            cell_formats.append((data_rng, CellFormat(
                 numberFormat=CURRENCY_FORMAT, horizontalAlignment="RIGHT")))
         elif kind == "line_muted":
             cell_formats.append((rng, CellFormat(
                 textFormat=TextFormat(italic=True, foregroundColor=GREY))))
-            cell_formats.append((f"B{index}", CellFormat(
+            cell_formats.append((data_rng, CellFormat(
                 numberFormat=CURRENCY_FORMAT, horizontalAlignment="RIGHT",
                 textFormat=TextFormat(italic=True, foregroundColor=GREY))))
         elif kind == "total":
             cell_formats.append((rng, CellFormat(
                 textFormat=TextFormat(bold=True), borders=TOP_BORDER)))
-            cell_formats.append((f"B{index}", CellFormat(
+            cell_formats.append((data_rng, CellFormat(
                 textFormat=TextFormat(bold=True), numberFormat=CURRENCY_FORMAT,
                 horizontalAlignment="RIGHT", borders=TOP_BORDER)))
         elif kind == "percent":
             cell_formats.append((rng, CellFormat(textFormat=TextFormat(bold=True))))
-            cell_formats.append((f"B{index}", CellFormat(
+            cell_formats.append((data_rng, CellFormat(
                 textFormat=TextFormat(bold=True),
                 numberFormat=NumberFormat(type="PERCENT", pattern="0.0%"),
                 horizontalAlignment="RIGHT")))
         elif kind == "note":
-            cell_formats.append((rng, CellFormat(
+            cell_formats.append((f"A{offset}", CellFormat(
                 textFormat=TextFormat(italic=True, fontSize=9, foregroundColor=GREY),
                 wrapStrategy="WRAP")))
-            merges.append(rng)
 
+    return cell_formats
+
+
+def _write_statement_pivot(
+    spreadsheet: gspread.Spreadsheet, statement: dict, period_label: str
+) -> tuple[gspread.Worksheet, list[dict]]:
+    """Пише період як колонку в постійну вкладку "Виписка" (B = найновіший).
+
+    Повторний виклик для того самого періоду перезаписує його колонку.
+    Новий період вставляється в B, старі колонки зсуваються праворуч без ліміту.
+    """
+    template = _row_template()
+    worksheet = _ensure_statement_worksheet(spreadsheet, template)
+
+    header_row = worksheet.row_values(1)
+    existing_periods = header_row[1:]  # від колонки B
+
+    if period_label in existing_periods:
+        target_col = existing_periods.index(period_label) + 2
+        total_cols = 1 + len(existing_periods)
+    else:
+        if existing_periods:
+            spreadsheet.batch_update({"requests": [{
+                "insertDimension": {
+                    "range": {
+                        "sheetId": worksheet.id,
+                        "dimension": "COLUMNS",
+                        "startIndex": 1,
+                        "endIndex": 2,
+                    },
+                    "inheritFromBefore": False,
+                },
+            }]})
+        target_col = 2
+        total_cols = 2 + len(existing_periods)
+
+    values = _statement_values(statement)
+
+    labels = [[""]] + [[row["label"]] for row in template]
+    worksheet.update(labels, "A1", value_input_option=ValueInputOption.user_entered)
+
+    column = [[period_label]] + [[values.get(row["key"], "")] for row in template]
+    worksheet.update(
+        column, f"{_col_letter(target_col)}1", value_input_option=ValueInputOption.user_entered)
+
+    cell_formats = _statement_formats(template, total_cols)
     requests = format_cell_ranges(worksheet, cell_formats)
-    requests += _set_column_widths_requests(worksheet, [("A", 340), ("B", 140)])
-    requests += _set_frozen_requests(worksheet, rows=0)
-    requests += [_merge_request(worksheet, rng) for rng in merges]
-    return requests
+    requests += _set_column_widths_requests(worksheet, [("A", 340)] + [
+        (_col_letter(col), 130) for col in range(2, total_cols + 1)
+    ])
+    requests += _set_frozen_requests(worksheet, rows=1, cols=1)
+    return worksheet, requests
 
 
 # ── Вкладка 2: розкладка по товарах ────────────────────────────────────────────
@@ -318,24 +420,19 @@ def export_to_sheets(
     report("Відкриття таблиці…")
     spreadsheet = _open_spreadsheet(client)
 
-    statement_rows = 6 + len(statement["header_lines"]) + sum(
-        2 + len(section["lines"]) for section in statement["sections"]
-    ) + (5 if statement.get("trailer") else 0)
     unallocated_breakdown = breakdown.get("unallocated_breakdown") or []
     items_rows = 2 + len(breakdown["items"]) + (
         2 + len(unallocated_breakdown) if unallocated_breakdown else 0
     )
 
-    report(f'Перестворення вкладки "{period_label} Виписка"…')
-    statement_ws = _reset_worksheet(
-        spreadsheet, f"{period_label} Виписка", rows=statement_rows + 5, cols=2)
+    report(f'Оновлення вкладки "{STATEMENT_SHEET_TITLE}"…')
+    statement_ws, requests = _write_statement_pivot(spreadsheet, statement, period_label)
+
     report(f'Перестворення вкладки "{period_label} Товари"…')
     items_ws = _reset_worksheet(
         spreadsheet, f"{period_label} Товари", rows=items_rows + 5,
         cols=len(ITEM_HEADER))
 
-    report("Запис виписки…")
-    requests = _write_statement(statement_ws, statement)
     report("Запис розкладки по товарах…")
     requests += _write_items(items_ws, breakdown)
 
