@@ -60,9 +60,18 @@ st.markdown(
         transform: translateY(-2px);
         box-shadow: 0 8px 26px rgba(0, 113, 220, 0.45);
     }
+    /* Streamlit сам ставить position:relative на stElementContainer — це
+    заважає нашому position:absolute нижче бачити картку як containing
+    block (він бачить той 16x40px контейнер замість картки). Гасимо його. */
+    .st-key-big-nav-card [data-testid="stElementContainer"],
+    [class^="st-key-small-nav-card"] [data-testid="stElementContainer"] {
+        position: static !important;
+    }
+
     /* видима "таблетка"-кнопка по центру картки, клікабельна цілком */
     .st-key-big-nav-card [data-testid="stPageLink"] a {
-        position: absolute; inset: 0; z-index: 2;
+        position: absolute !important; inset: 0 !important; z-index: 2;
+        width: auto !important; height: auto !important;
         display: flex; align-items: center; justify-content: center;
         padding-bottom: 40px;
     }
@@ -89,7 +98,8 @@ st.markdown(
         border-color: #0071dc;
     }
     [class^="st-key-small-nav-card"] [data-testid="stPageLink"] a {
-        position: absolute; inset: 0; z-index: 2;
+        position: absolute !important; inset: 0 !important; z-index: 2;
+        width: auto !important; height: auto !important;
     }
     [class^="st-key-small-nav-card"] [data-testid="stPageLink"] a p {
         font-weight: 600;
