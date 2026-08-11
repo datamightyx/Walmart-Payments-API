@@ -33,7 +33,7 @@ if "cogs_report" not in st.session_state:
 with st.container(border=True):
     st.subheader("1. Обрати звіт")
     st.caption(
-        "Оберіть розрахунковий період"
+        "Оберіть розрахунковий період "
         "виплати через Walmart API."
     )
 
