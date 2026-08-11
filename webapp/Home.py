@@ -112,11 +112,11 @@ st.markdown(
 # ── велика кнопка: Запуск ────────────────────────────────────────────────
 with st.container(border=True, key="big-nav-card"):
     st.page_link("pages/3_▶️_Запуск.py", label="Запуск розрахунку COGS", icon="▶️")
-    st.markdown(
-        '<div class="big-nav-caption">Обрати звіт і дату, порахувати COGS, '
-        'вивантажити у Sheets</div>',
-        unsafe_allow_html=True,
-    )
+    # st.markdown(
+    #     '<div class="big-nav-caption">Обрати звіт і дату, порахувати COGS, '
+    #     'вивантажити у Sheets</div>',
+    #     unsafe_allow_html=True,
+    # )
 
 st.write("")
 
