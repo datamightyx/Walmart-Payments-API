@@ -153,6 +153,11 @@ def _write_statement(worksheet: gspread.Worksheet, statement: dict) -> list[dict
         row_kinds.append("blank")
         rows.append(["Advertising (Spend)", _money(trailer["ad_spend"])])
         row_kinds.append("line")
+        rows.append(["", ""])
+        row_kinds.append("blank")
+        profit = statement["total_payable"] - trailer["total_cogs"] - trailer["ad_spend"]
+        rows.append(["Profit", _money(profit)])
+        row_kinds.append("total")
         tacos_pct = trailer.get("tacos_pct")
         rows.append(["TACOS %", (tacos_pct / 100) if tacos_pct is not None else ""])
         row_kinds.append("percent")
