@@ -61,6 +61,7 @@ with st.container(border=True):
                 status.write("Розпакування і парсинг CSV…")
                 st.session_state.cogs_report = parse_recon_zip(zip_bytes)
                 st.session_state.cogs_report_source = f"API:{payout_date}"
+                st.session_state.cogs_requested_period = (period_start, period_end)
 
                 st.session_state.cogs_last_result = None
                 status.update(label="Звіт завантажено", state="complete", expanded=False)
@@ -77,6 +78,15 @@ with st.container(border=True):
         st.write(f"Період: {report.period_start} .. {report.period_end}   "
                  f"Total Payable: {format_money(report.total_payable, report.currency or 'USD')}")
 
+        requested = st.session_state.get("cogs_requested_period")
+        if requested and (report.period_start, report.period_end) != requested:
+            st.warning(
+                f"Запитано період {requested[0]}..{requested[1]}, а файл "
+                f"покриває {report.period_start}..{report.period_end}. "
+                f"Walmart видає виплату не рівно на кінець періоду — перевір, "
+                f"що це той звіт, який ти очікував."
+            )
+
 if report:
     with st.container(border=True):
         st.subheader("2. Розрахувати COGS")
@@ -84,6 +94,7 @@ if report:
         as_of = st.date_input(
             "Ціни станом на (за замовчуванням — кінець періоду звіту)",
             value=default_as_of,
+            key=f"as_of_{report.csv_name}",
         )
 
         if st.button("Порахувати COGS", type="primary"):
