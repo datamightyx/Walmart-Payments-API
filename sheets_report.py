@@ -312,7 +312,7 @@ def _write_statement_pivot(
     cell_formats = _statement_formats(template, total_cols)
     requests = format_cell_ranges(worksheet, cell_formats)
     requests += _set_column_widths_requests(worksheet, [("A", 340)] + [
-        (_col_letter(col), 130) for col in range(2, total_cols + 1)
+        (_col_letter(col), 170) for col in range(2, total_cols + 1)
     ])
     requests += _set_frozen_requests(worksheet, rows=1, cols=1)
     return worksheet, requests
