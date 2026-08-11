@@ -21,7 +21,7 @@ from _common import (
 
 import streamlit as st
 
-page_header("Запуск розрахунку COGS", "▶️")
+page_header("Запуск вивантаження даних по Payments", "▶️")
 
 conn = get_db_connection()
 
