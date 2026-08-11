@@ -17,8 +17,7 @@ import streamlit as st
 page_header("Walmart Payments", "📦")
 
 st.caption(
-    "Розрахунок COGS для Walmart-виплат — версійовані ціни (зміна ціни не "
-    "чіпає вже пораховані періоди) і незмінна історія запусків."
+    "Розрахунок Walmart-виплат з COGS"
 )
 
 conn = get_db_connection()
